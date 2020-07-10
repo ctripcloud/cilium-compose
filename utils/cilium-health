@@ -1,0 +1,10 @@
+#!/bin/bash
+# Author: arthurchiao
+# 2019-01-29 18:24:47
+#
+# cilium wrapper: run cilium commands inside cilium agent container
+# usage: ./cilium.sh <command>
+# example: ./cilium.sh status # equal to "cilium status"
+
+CID=`sudo docker ps | grep cilium-agent | awk '{print $1}'`
+sudo docker exec $CID cilium-health $@

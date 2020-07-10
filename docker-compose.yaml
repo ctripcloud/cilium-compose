@@ -1,0 +1,52 @@
+version: '2'
+services:
+  cilium-init:
+    image: <trip.com internal hub>/cloud-network/cilium:20191108
+    container_name: cilium-init
+    network_mode: "host"
+    privileged: true
+    entrypoint: /init-container.sh
+    environment:
+      - CLEAN_CILIUM_STATE=false
+      - CLEAN_CILIUM_BPF_STATE=false
+      - CILIUM_WAIT_BPF_MOUNT=false
+    volumes:
+      - /sys/fs/bpf:/sys/fs/bpf
+      - /var/run/cilium:/var/run/cilium
+      - /opt/cni/bin:/host/opt/cni/bin
+      - /etc/cni/net.d:/host/etc/cni/net.d
+      - /lib/modules:/lib/modules
+      - /run/xtables.lock:/run/xtables.lock
+  cilium-install-cni:
+    image: <trip.com internal hub>/cloud-network/cilium:20191108
+    container_name: cilium-install-cni
+    network_mode: "host"
+    privileged: true
+    entrypoint: /cni-install.sh
+    volumes:
+      - /opt/cni/bin:/host/opt/cni/bin
+      - /etc/cni/net.d:/host/etc/cni/net.d
+  cilium-agent:
+    image: <trip.com internal hub>/cloud-network/cilium:20191108
+    container_name: cilium-agent
+    restart: always
+    entrypoint: cilium-agent --config-dir=/tmp/cilium/config-map
+    network_mode: "host"
+    privileged: true
+    # environment:
+    #   - K8S_NODE_NAME=CHANGE_ME_K8S_NODE_NAME
+    volumes:
+      - /etc/kubernetes:/etc/kubernetes:ro
+      - ./mount/var/lib/etcd-config:/var/lib/etcd-config:ro
+      - ./mount/var/lib/etcd-secrets:/var/lib/etcd-secrets:ro
+      - ./mount/config-map:/tmp/cilium/config-map:ro
+      - /var/run/cilium:/var/run/cilium
+      - /sys/fs/bpf:/sys/fs/bpf
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /opt/cni/bin:/host/opt/cni/bin
+      - /etc/cni/net.d:/host/etc/cni/net.d
+      - /lib/modules:/lib/modules
+      - /run/xtables.lock:/run/xtables.lock
+    depends_on:
+      - "cilium-init"
+      - "cilium-install-cni"
